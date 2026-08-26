@@ -1,56 +1,450 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>遠距離學長 · 聊天</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="app">
-        <!-- 頂部導航：符合 LINE 風格但無商標 -->
-        <header id="chat-header">
-            <div class="header-left">
-                <div class="avatar" id="male-avatar">👤</div>
-                <div class="header-info">
-                    <span class="male-name">bae · 林子辰</span>
-                    <span class="online-status" id="online-status">⚡ 在線</span>
-                </div>
-            </div>
-            <div class="header-actions">
-                <button id="video-call-btn" aria-label="視訊通話">📹</button>
-            </div>
-        </header>
+/* style.css - 完整配適 index.html 的 LINE 風格聊天介面 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
 
-        <!-- 聊天訊息區域 -->
-        <main id="chat-messages">
-            <!-- 動態由 JavaScript 渲染 -->
-        </main>
+body {
+    background: #1e1e2a; /* 深色背景襯托手機感 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 12px;
+}
 
-        <!-- 底部輸入區 -->
-        <footer id="chat-footer">
-            <div class="input-wrapper">
-                <input type="text" id="message-input" placeholder="輸入訊息..." autocomplete="off">
-                <button id="send-btn">傳送</button>
-            </div>
-            <div class="footer-extra">
-                <button id="clear-history-btn" class="clear-btn">清除紀錄</button>
-                <span id="typing-indicator" class="typing">✎ 對方正在輸入...</span>
-            </div>
-        </footer>
-    </div>
+#app {
+    max-width: 430px;
+    width: 100%;
+    height: 780px;
+    background: #f5f7fa;
+    border-radius: 36px 36px 28px 28px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
 
-    <!-- 確認對話框 (自訂) -->
-    <div id="confirm-overlay" class="confirm-overlay hidden">
-        <div class="confirm-box">
-            <p>⚠️ 確定要清除所有聊天紀錄嗎？</p>
-            <div class="confirm-actions">
-                <button id="confirm-yes">確定清除</button>
-                <button id="confirm-no">取消</button>
-            </div>
-        </div>
-    </div>
+/* ---------- 頂部 Header (類似 LINE) ---------- */
+#chat-header {
+    background: #eef1f5;
+    padding: 14px 16px 10px 16px;
+    border-bottom: 1px solid #d0d7de;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
 
-    <script src="script.js"></script>
-</body>
-</html>
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#male-avatar {
+    width: 44px;
+    height: 44px;
+    background: #b0c4de;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #2c3e50;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+
+.header-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.male-name {
+    font-weight: 700;
+    font-size: 17px;
+    color: #1e293b;
+    letter-spacing: 0.3px;
+}
+
+#online-status {
+    font-size: 13px;
+    color: #2b8c5e;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#online-status::before {
+    content: "●";
+    font-size: 10px;
+    color: #34c759;
+    margin-right: 2px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+}
+
+#video-call-btn {
+    background: transparent;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 30px;
+    transition: background 0.15s;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+#video-call-btn:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+/* ---------- 聊天訊息區域 ---------- */
+#chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 14px 10px 14px;
+    background: #f5f7fa;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scroll-behavior: smooth;
+}
+
+/* 訊息氣泡通用 */
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-width: 80%;
+    margin-bottom: 6px;
+    animation: fadeIn 0.2s ease;
+}
+
+.message-wrapper.left {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message-wrapper.right {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.bubble {
+    padding: 10px 14px;
+    border-radius: 20px;
+    font-size: 15px;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    position: relative;
+}
+
+.message-wrapper.left .bubble {
+    background: #ffffff;
+    border-bottom-left-radius: 6px;
+    color: #1e293b;
+    border: 1px solid #e9edf2;
+}
+
+.message-wrapper.right .bubble {
+    background: #0084ff;
+    color: white;
+    border-bottom-right-radius: 6px;
+}
+
+.message-time {
+    font-size: 11px;
+    color: #8e98a3;
+    margin-top: 4px;
+    padding: 0 6px;
+    letter-spacing: 0.2px;
+}
+
+.message-wrapper.right .message-time {
+    color: #6b7a8d;
+}
+
+/* 系統訊息 (例如清除紀錄) */
+.system-message {
+    text-align: center;
+    font-size: 13px;
+    color: #8e98a3;
+    padding: 8px 0 4px 0;
+    letter-spacing: 0.3px;
+    border-top: 1px dashed #d0d7de;
+    margin-top: 6px;
+}
+
+/* ---------- 底部輸入區 ---------- */
+#chat-footer {
+    background: #eef1f5;
+    border-top: 1px solid #d0d7de;
+    padding: 10px 14px 14px 14px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border-radius: 30px;
+    padding: 4px 6px 4px 16px;
+    border: 1px solid #d0d7de;
+    transition: border 0.15s;
+}
+
+.input-wrapper:focus-within {
+    border-color: #0084ff;
+}
+
+#message-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 16px;
+    padding: 10px 0;
+    color: #1e293b;
+    min-width: 0;
+}
+
+#message-input::placeholder {
+    color: #9aa6b5;
+    font-weight: 400;
+}
+
+#send-btn {
+    background: #0084ff;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 8px 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+}
+
+#send-btn:hover {
+    background: #0070e0;
+}
+
+#send-btn:active {
+    opacity: 0.7;
+}
+
+.footer-extra {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.clear-btn {
+    background: transparent;
+    border: none;
+    color: #8e98a3;
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+}
+
+.clear-btn:hover {
+    background: rgba(0,0,0,0.04);
+    color: #e74c3c;
+}
+
+.typing {
+    font-size: 13px;
+    color: #0084ff;
+    font-weight: 450;
+    letter-spacing: 0.2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    min-height: 20px;
+}
+
+.typing.active {
+    opacity: 1;
+}
+
+/* ---------- 自訂確認對話框 ---------- */
+.confirm-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    border-radius: 36px;
+    transition: opacity 0.2s;
+}
+
+.confirm-overlay.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.confirm-box {
+    background: white;
+    max-width: 300px;
+    width: 85%;
+    padding: 28px 20px 22px;
+    border-radius: 28px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    text-align: center;
+}
+
+.confirm-box p {
+    font-size: 17px;
+    font-weight: 500;
+    color: #1e293b;
+    margin-bottom: 24px;
+    line-height: 1.4;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.confirm-actions button {
+    flex: 1;
+    padding: 12px 0;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+#confirm-yes {
+    background: #e74c3c;
+    color: white;
+}
+
+#confirm-yes:hover {
+    background: #c0392b;
+}
+
+#confirm-no {
+    background: #eef1f5;
+    color: #1e293b;
+}
+
+#confirm-no:hover {
+    background: #d5dbe3;
+}
+
+.confirm-actions button:active {
+    transform: scale(0.97);
+}
+
+/* ---------- 動畫 ---------- */
+@keyframes fadeIn {
+    from { opacity: 0.3; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- RWD 微調 (手機優先) ---------- */
+@media (max-width: 480px) {
+    body {
+        padding: 0;
+        background: #f5f7fa;
+        align-items: stretch;
+    }
+
+    #app {
+        max-width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+        background: #f5f7fa;
+    }
+
+    .confirm-overlay {
+        border-radius: 0;
+    }
+
+    #chat-header {
+        padding: 12px 14px 8px 14px;
+    }
+
+    #male-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+    }
+
+    .male-name {
+        font-size: 16px;
+    }
+
+    #chat-messages {
+        padding: 12px 10px 6px 10px;
+    }
+
+    .bubble {
+        font-size: 15px;
+        padding: 9px 13px;
+    }
+
+    .input-wrapper {
+        padding: 2px 4px 2px 14px;
+    }
+
+    #message-input {
+        font-size: 15px;
+        padding: 8px 0;
+    }
+
+    #send-btn {
+        font-size: 14px;
+        padding: 6px 14px;
+    }
+
+    .footer-extra {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .clear-btn {
+        font-size: 12px;
+    }
+
+    .typing {
+        font-size: 12px;
+    }
+}
+
+/* 針對 iPhone 安全區域 (瀏海) 可選 */
+@supports (padding: max(0px)) {
+    #app {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
