@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>遠距離學長 · 聊天</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=2">
 </head>
 <body>
   <div id="app">
+    <!-- 頂部導覽列 -->
     <header id="chat-header">
       <div class="header-left">
         <div class="avatar" id="male-avatar"></div>
@@ -21,11 +22,13 @@
       </div>
     </header>
 
+    <!-- 聊天訊息區域 -->
     <main id="chat-messages"></main>
 
+    <!-- 底部輸入區 -->
     <footer id="chat-footer">
       <div class="input-wrapper">
-        <input type="text" id="message-input" placeholder="輸入訊息...">
+        <input type="text" id="message-input" placeholder="輸入訊息..." autocomplete="off">
         <button id="send-btn">傳送</button>
       </div>
       <div class="footer-extra">
@@ -35,6 +38,7 @@
     </footer>
   </div>
 
+  <!-- 確認清除紀錄彈窗 -->
   <div id="confirm-overlay" class="confirm-overlay hidden">
     <div class="confirm-box">
       <p>⚠️ 確定要清除所有聊天紀錄嗎？</p>
@@ -45,6 +49,6 @@
     </div>
   </div>
 
-  <script src="./script.js"></script>
+  <script src="./script.js?v=2"></script>
 </body>
 </html>
