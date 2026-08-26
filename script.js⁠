@@ -1,19 +1,5 @@
-document.addEventListener("DOMContentLoaded", function() {
-  var sendBtn = document.getElementById("send-btn");
-  var input = document.getElementById("message-input");
-  var messages = document.getElementById("chat-messages");
+alert("JS成功載入！");
 
-  if (sendBtn) {
-    sendBtn.onclick = function() {
-      var text = input.value;
-      if (text.trim() === "") return;
-      
-      var msg = document.createElement("div");
-      msg.className = "message sent";
-      msg.innerHTML = '<div class="bubble">' + text + '</div>';
-      messages.appendChild(msg);
-      
-      input.value = "";
-    };
-  }
+document.body.addEventListener("click", function() {
+  alert("點擊畫面成功！");
 });
