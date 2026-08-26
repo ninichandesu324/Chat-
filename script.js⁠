@@ -1,0 +1,353 @@
+// script.js - 完整聊天邏輯，搭配 index.html / style.css
+
+(function() {
+    'use strict';
+
+    // ---------- DOM 參考 ----------
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const clearBtn = document.getElementById('clear-history-btn');
+    const videoBtn = document.getElementById('video-call-btn');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const confirmOverlay = document.getElementById('confirm-overlay');
+    const confirmYes = document.getElementById('confirm-yes');
+    const confirmNo = document.getElementById('confirm-no');
+    const onlineStatus = document.getElementById('online-status');
+
+    // ---------- 設定 ----------
+    const STORAGE_KEY = 'chat_history_data';
+    const MALE_NAME = '學長';
+    const FEMALE_NAME = '我';
+
+    // 學長回覆庫 (根據女主角最後訊息關鍵字)
+    const MALE_REPLIES = [
+        { keywords: ['好', '嗯', '喔', '對', '是', '真的', '哈哈', '笑', '開心', '棒', '讚', '厲害'], 
+          replies: ['你喜歡就好 😊', '哈哈 真的嗎', '那就好～', '對啊', '我知道', '你開心我也開心', '嗯嗯 我懂', '對呀 我也這麼覺得'] },
+        { keywords: ['今天', '忙', '課', '考試', '作業', '報告', '教授', '上課'], 
+          replies: ['今天課有點多 晚點回你', '剛下課 累', '作業寫到剛剛', '考試快到了 要加油', '教授今天講好多', '我也在趕報告 😅', '剛打完排球 手好痠'] },
+        { keywords: ['排球', '打球', '運動', '健身房', '練球'], 
+          replies: ['今天練了兩小時 超累', '排球真的很好玩', '下次一起打？', '你也要多運動', '我今天扣殺超帥 😎', '手還有點痠'] },
+        { keywords: ['音樂', '歌', '樂器', '吉他', '鋼琴', '聽歌', '唱歌'], 
+          replies: ['我最近在練一首新歌', '鋼琴真的很好聽', '你要聽我彈嗎', '這首歌很棒', '我吉他進步了', '下次彈給你聽'] },
+        { keywords: ['想', '愛', '喜歡', '想念', '抱', '親', '寶貝', '男朋友'], 
+          replies: ['我也想你 ❤️', '乖乖 再撐一下', '很快就見面了', '我也很愛你', '抱一個', '你永遠是我的寶貝', '想抱抱你'] },
+        { keywords: ['吃', '餓', '晚餐', '午餐', '早餐', '喝', '飲料', '咖啡'], 
+          replies: ['我剛吃飽', '你吃飽了嗎？', '晚餐吃什麼', '等等去買咖啡', '我也想喝飲料', '吃健康一點'] },
+        { keywords: ['晚安', '睡', '熬夜', '累', '休息', '早點睡'], 
+          replies: ['晚安 早點休息', '不要熬夜喔', '我也要睡了', '今天早點睡吧', '好好休息', '夢裡見'] },
+        { keywords: ['視訊', '電話', '打給你', '接電話', '視訊通話'], 
+          replies: ['現在不方便 晚點打給你', '剛好在忙 等等', '我也想你 但是在上課', '晚點視訊好嗎', '我現在在外面 等等'] },
+        { keywords: ['出門', '去', '車', '路上', '捷運', '公車', '走路'], 
+          replies: ['路上小心', '注意安全', '我也在路上', '快到了嗎', '我等你'] }
+    ];
+
+    const DEFAULT_REPLIES = [
+        '嗯嗯 我知道了',
+        '好喔 你說的對',
+        '哈哈 你好好笑',
+        '我也在想你',
+        '今天過得怎麼樣？',
+        '我正在忙 晚點回你',
+        '你最近好嗎？',
+        '想你了',
+        '好 我等等回你',
+        '你真的很可愛',
+        '我也在聽音樂',
+        '排球隊剛練完',
+        '明天考試 先讀書',
+        '等等跟你說',
+        '我現在在外面',
+        '你吃飯了嗎？'
+    ];
+
+    // ---------- 狀態 ----------
+    let chatHistory = [];
+    let isTyping = false;
+    let typingTimeout = null;
+
+    // ---------- 輔助函式 ----------
+    function getCurrentTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    function getRandomReply(userMessage) {
+        // 根據關鍵字匹配
+        for (let entry of MALE_REPLIES) {
+            for (let keyword of entry.keywords) {
+                if (userMessage.includes(keyword)) {
+                    const replyList = entry.replies;
+                    return replyList[Math.floor(Math.random() * replyList.length)];
+                }
+            }
+        }
+        // 隨機預設回覆
+        return DEFAULT_REPLIES[Math.floor(Math.random() * DEFAULT_REPLIES.length)];
+    }
+
+    // ---------- 儲存與載入 ----------
+    function saveChat() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
+        } catch (e) {
+            console.warn('儲存失敗', e);
+        }
+    }
+
+    function loadChat() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    chatHistory = parsed;
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('讀取失敗', e);
+        }
+        return false;
+    }
+
+    // ---------- 渲染聊天 ----------
+    function renderMessages() {
+        messagesContainer.innerHTML = '';
+        if (chatHistory.length === 0) {
+            // 沒有訊息時顯示空白狀態 (可保留)
+            return;
+        }
+
+        chatHistory.forEach((msg, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${msg.sender === 'male' ? 'left' : 'right'}`;
+
+            // 氣泡
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.textContent = msg.text;
+
+            // 時間
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = msg.time || getCurrentTime();
+
+            wrapper.appendChild(bubble);
+            wrapper.appendChild(time);
+            messagesContainer.appendChild(wrapper);
+        });
+
+        // 捲動到底部
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function addSystemMessage(text) {
+        const sysDiv = document.createElement('div');
+        sysDiv.className = 'system-message';
+        sysDiv.textContent = text;
+        messagesContainer.appendChild(sysDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // ---------- 新增訊息 (核心) ----------
+    function addMessage(sender, text, time) {
+        const msgTime = time || getCurrentTime();
+        const newMsg = {
+            sender: sender,    // 'male' 或 'female'
+            text: text,
+            time: msgTime
+        };
+        chatHistory.push(newMsg);
+        saveChat();
+        renderMessages();
+        return newMsg;
+    }
+
+    // ---------- 女主角傳送訊息 ----------
+    function sendFemaleMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        // 新增女主角訊息
+        addMessage('female', text);
+        messageInput.value = '';
+        messageInput.focus();
+
+        // 顯示「正在輸入…」
+        showTyping();
+
+        // 模擬學長回覆 (延遲)
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            hideTyping();
+            // 根據女主角最後訊息產生回覆
+            const replyText = getRandomReply(text);
+            addMessage('male', replyText);
+        }, 1200 + Math.random() * 1500);
+    }
+
+    // ---------- 正在輸入動畫 ----------
+    function showTyping() {
+        if (!typingIndicator) return;
+        typingIndicator.classList.add('active');
+        isTyping = true;
+    }
+
+    function hideTyping() {
+        if (!typingIndicator) return;
+        typingIndicator.classList.remove('active');
+        isTyping = false;
+    }
+
+    // ---------- 清除紀錄 (含確認) ----------
+    function showConfirm() {
+        confirmOverlay.classList.remove('hidden');
+    }
+
+    function hideConfirm() {
+        confirmOverlay.classList.add('hidden');
+    }
+
+    function clearHistory() {
+        chatHistory = [];
+        saveChat();
+        renderMessages();
+        // 顯示系統訊息
+        addSystemMessage('🗑️ 聊天紀錄已清除');
+        hideConfirm();
+    }
+
+    // ---------- 視訊通話 (簡單模擬) ----------
+    function startVideoCall() {
+        // 簡單模擬視訊通話畫面
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: absolute;
+            inset: 0;
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-radius: inherit;
+            color: white;
+            font-size: 24px;
+            gap: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+        `;
+        overlay.innerHTML = `
+            <div style="font-size: 80px;">📹</div>
+            <div style="font-weight: 600; font-size: 28px;">與 學長 視訊中</div>
+            <div style="font-size: 16px; opacity: 0.7;">通話模擬畫面</div>
+            <button id="end-call-btn" style="
+                background: #e74c3c;
+                border: none;
+                color: white;
+                font-size: 20px;
+                padding: 16px 40px;
+                border-radius: 40px;
+                cursor: pointer;
+                margin-top: 20px;
+                font-weight: 600;
+            ">結束通話</button>
+        `;
+        document.getElementById('app').appendChild(overlay);
+
+        document.getElementById('end-call-btn').addEventListener('click', function() {
+            overlay.remove();
+        });
+
+        // 點擊空白處也可結束 (但保留按鈕)
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+    }
+
+    // ---------- 初始化 ----------
+    function init() {
+        // 1. 載入歷史紀錄
+        const hasHistory = loadChat();
+
+        // 2. 渲染
+        renderMessages();
+
+        // 3. 如果沒有歷史，加入歡迎訊息 (僅第一次)
+        if (!hasHistory || chatHistory.length === 0) {
+            // 加入系統歡迎訊息
+            addSystemMessage('💬 開始與學長聊天吧！');
+            // 加入學長第一句 (讓畫面不空)
+            addMessage('male', '嗨～ 你最近過得好嗎？');
+            // 稍後加入女主角視角 (但不要太多)
+            setTimeout(() => {
+                // 可選擇不加入，讓使用者自己開始
+            }, 100);
+        } else {
+            // 有歷史紀錄，直接顯示
+            // 但可能沒有系統訊息，補一個輕提示
+            if (chatHistory.length > 0 && chatHistory[0].sender !== 'system') {
+                // 不加系統訊息，保持乾淨
+            }
+        }
+
+        // 4. 事件綁定
+        sendBtn.addEventListener('click', sendFemaleMessage);
+
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendFemaleMessage();
+            }
+        });
+
+        clearBtn.addEventListener('click', showConfirm);
+
+        confirmYes.addEventListener('click', clearHistory);
+        confirmNo.addEventListener('click', hideConfirm);
+
+        // 點擊 overlay 外部關閉 (但保留按鈕)
+        confirmOverlay.addEventListener('click', function(e) {
+            if (e.target === confirmOverlay) {
+                hideConfirm();
+            }
+        });
+
+        videoBtn.addEventListener('click', startVideoCall);
+
+        // 5. 線上狀態變換 (模擬)
+        setInterval(() => {
+            const statuses = ['⚡ 在線', '📱 行動中', '🎵 聽音樂', '🏐 打排球', '📚 讀書中', '🌙 忙碌'];
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            if (onlineStatus) {
+                onlineStatus.textContent = randomStatus;
+                // 在線狀態顏色變化
+                if (randomStatus.includes('在線') || randomStatus.includes('行動')) {
+                    onlineStatus.style.color = '#2b8c5e';
+                } else if (randomStatus.includes('讀書') || randomStatus.includes('忙碌')) {
+                    onlineStatus.style.color = '#d97706';
+                } else {
+                    onlineStatus.style.color = '#4b7bec';
+                }
+            }
+        }, 8000);
+
+        // 6. 輸入框自動聚焦 (手機友善)
+        messageInput.focus();
+
+        console.log('✅ 聊天已初始化，歷史紀錄:', chatHistory.length, '筆');
+    }
+
+    // 當 DOM 完全載入
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
