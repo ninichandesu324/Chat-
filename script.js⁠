@@ -1,100 +1,19 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const messageInput = document.getElementById('message-input');
-  const sendBtn = document.getElementById('send-btn');
-  const chatMessages = document.getElementById('chat-messages');
-  const typingIndicator = document.getElementById('typing-indicator');
-  const clearHistoryBtn = document.getElementById('clear-history-btn');
-  const confirmOverlay = document.getElementById('confirm-overlay');
-  const confirmYes = document.getElementById('confirm-yes');
-  const confirmNo = document.getElementById('confirm-no');
+document.addEventListener("DOMContentLoaded", function() {
+  var sendBtn = document.getElementById("send-btn");
+  var input = document.getElementById("message-input");
+  var messages = document.getElementById("chat-messages");
 
-  // 載入歷史紀錄
-  let messages = JSON.parse(localStorage.getItem('chatHistory')) || [];
-  
-  function renderMessages() {
-    chatMessages.innerHTML = '';
-    messages.forEach(msg => {
-      appendMessageUI(msg.text, msg.sender, msg.time);
-    });
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
-
-  function appendMessageUI(text, sender, timeStr) {
-    const msgDiv = document.createElement('div');
-    msgDiv.classList.add('message', sender);
-    
-    const bubble = document.createElement('div');
-    bubble.classList.add('bubble');
-    bubble.textContent = text;
-    
-    const timeSpan = document.createElement('span');
-    timeSpan.classList.add('timestamp');
-    timeSpan.textContent = timeStr;
-    
-    msgDiv.appendChild(bubble);
-    msgDiv.appendChild(timeSpan);
-    chatMessages.appendChild(msgDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
-
-  function sendMessage() {
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // 顯示使用者訊息
-    appendMessageUI(text, 'sent', timeStr);
-    messages.push({ text, sender: 'sent', time: timeStr });
-    localStorage.setItem('chatHistory', JSON.stringify(messages));
-
-    messageInput.value = '';
-
-    // 模擬對方輸入與回覆
-    if (typingIndicator) typingIndicator.classList.remove('hidden');
-
-    setTimeout(() => {
-      if (typingIndicator) typingIndicator.classList.add('hidden');
-      const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const replyText = "學長收到囉！剛在忙，妳今天過得怎樣？";
-      
-      appendMessageUI(replyText, 'received', replyTime);
-      messages.push({ text: replyText, sender: 'received', time: replyTime });
-      localStorage.setItem('chatHistory', JSON.stringify(messages));
-    }, 1500);
-  }
-
-  // 事件監聽
   if (sendBtn) {
-    sendBtn.addEventListener('click', sendMessage);
+    sendBtn.onclick = function() {
+      var text = input.value;
+      if (text.trim() === "") return;
+      
+      var msg = document.createElement("div");
+      msg.className = "message sent";
+      msg.innerHTML = '<div class="bubble">' + text + '</div>';
+      messages.appendChild(msg);
+      
+      input.value = "";
+    };
   }
-
-  if (messageInput) {
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        sendMessage();
-      }
-    });
-  }
-
-  // 清除紀錄功能
-  if (clearHistoryBtn && confirmOverlay) {
-    clearHistoryBtn.addEventListener('click', () => {
-      confirmOverlay.classList.remove('hidden');
-    });
-
-    confirmYes.addEventListener('click', () => {
-      messages = [];
-      localStorage.removeItem('chatHistory');
-      renderMessages();
-      confirmOverlay.classList.add('hidden');
-    });
-
-    confirmNo.addEventListener('click', () => {
-      confirmOverlay.classList.add('hidden');
-    });
-  }
-
-  // 初始渲染
-  renderMessages();
 });
