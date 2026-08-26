@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>遠距離學長 · 聊天</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 頂部導航：符合 LINE 風格但無商標 -->
+        <header id="chat-header">
+            <div class="header-left">
+                <div class="avatar" id="male-avatar">👤</div>
+                <div class="header-info">
+                    <span class="male-name">bae · 林子辰</span>
+                    <span class="online-status" id="online-status">⚡ 在線</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="video-call-btn" aria-label="視訊通話">📹</button>
+            </div>
+        </header>
+
+        <!-- 聊天訊息區域 -->
+        <main id="chat-messages">
+            <!-- 動態由 JavaScript 渲染 -->
+        </main>
+
+        <!-- 底部輸入區 -->
+        <footer id="chat-footer">
+            <div class="input-wrapper">
+                <input type="text" id="message-input" placeholder="輸入訊息..." autocomplete="off">
+                <button id="send-btn">傳送</button>
+            </div>
+            <div class="footer-extra">
+                <button id="clear-history-btn" class="clear-btn">清除紀錄</button>
+                <span id="typing-indicator" class="typing">✎ 對方正在輸入...</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 確認對話框 (自訂) -->
+    <div id="confirm-overlay" class="confirm-overlay hidden">
+        <div class="confirm-box">
+            <p>⚠️ 確定要清除所有聊天紀錄嗎？</p>
+            <div class="confirm-actions">
+                <button id="confirm-yes">確定清除</button>
+                <button id="confirm-no">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
